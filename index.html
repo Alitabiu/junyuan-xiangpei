@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菌元智配 Pro V1.4.1</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #0d6efd; --success: #198754; }
+        body { background: #f4f7fc; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { position: fixed; top: 0; left: 0; width: 240px; height: 100vh;
+            background: linear-gradient(135deg, #0d6efd, #6610f2); color: white;
+            padding-top: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar .brand { font-size: 1.4rem; font-weight: bold; padding: 0 20px; margin-bottom: 30px; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.85); padding: 12px 20px; border-radius: 8px; margin: 4px 10px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(255,255,255,0.2); color: white; }
+        .main-content { margin-left: 240px; padding: 30px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .card-header { background: white; border-bottom: 1px solid #e9ecef; font-weight: 600; }
+        .btn-gradient { background: linear-gradient(135deg, #0d6efd, #6610f2); border: none; color: white; }
+        .btn-gradient:hover { opacity: 0.9; color: white; }
+        .stat-card { border-radius: 12px; padding: 20px; color: white; margin-bottom: 20px; }
+        .stat-card i { font-size: 2rem; }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="brand"><i class="fas fa-bacteria me-2"></i>菌元智配 Pro V1.4.1</div>
+    <nav class="nav flex-column">
+        <a class="nav-link active" href="#dashboard-section" onclick="showSection('dashboard-section')"><i class="fas fa-tachometer-alt me-2"></i>仪表盘</a>
+        <a class="nav-link" href="#donors-section" onclick="showSection('donors-section')"><i class="fas fa-database me-2"></i>供体库管理</a>
+        <a class="nav-link" href="#match-section" onclick="showSection('match-section')"><i class="fas fa-link me-2"></i>智能匹配</a>
+        <a class="nav-link text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-2"></i>退出登录</a>
+    </nav>
+</div>
+<div class="main-content">
+    <div id="dashboard-section" class="content-section">
+        <h2 class="mb-4"><i class="fas fa-chart-line me-2"></i>医院总览</h2>
+        <div class="row" id="statCards"></div>
+    </div>
+    <div id="donors-section" class="content-section" style="display:none;">
+        <h2 class="mb-4"><i class="fas fa-database me-2"></i>供体档案管理</h2>
+        <button class="btn btn-gradient mb-3" data-bs-toggle="modal" data-bs-target="#addDonorModal"><i class="fas fa-plus me-1"></i>添加新供体</button>
+        <div class="card"><div class="card-header">供体列表</div><div class="card-body"><table class="table table-striped"><thead><tr><th>ID</th><th>代号</th><th>年龄</th><th>BMI</th><th>香农指数</th><th>有益菌</th><th>病原体</th></tr></thead><tbody id="donorTableBody"></tbody></table></div></div>
+    </div>
+    <div id="match-section" class="content-section" style="display:none;">
+        <h2 class="mb-4"><i class="fas fa-link me-2"></i>智能匹配</h2>
+        <div class="card"><div class="card-header">上传受体菌群并选择适应症</div><div class="card-body">
+            <form id="matchForm">
+                <div class="mb-3">
+                    <label class="form-label">适应症（匹配策略）</label>
+                    <select class="form-select" name="indication">
+                        <option value="general">一般FMT适应症</option>
+                        <option value="uc">溃疡性结肠炎 (UC)</option>
+                        <option value="obesity">肥胖症/代谢综合征</option>
+                        <option value="cirrhosis">肝硬化/肝性脑病</option>
+                        <option value="immune_skin">免疫介导皮肤病</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">受体16S丰度文件 (CSV)</label>
+                    <input class="form-control" type="file" name="file" accept=".csv" required>
+                </div>
+                <button type="submit" class="btn btn-gradient">开始智能匹配</button>
+            </form>
+            <div id="matchResult" class="mt-4"></div>
+        </div></div>
+    </div>
+</div>
+
+<div class="modal fade" id="addDonorModal"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5>添加供体</h5></div>
+    <div class="modal-body">
+        <form id="donorForm">
+            <input class="form-control mb-2" name="name" placeholder="供体代号" required>
+            <input class="form-control mb-2" type="number" name="age" placeholder="年龄" required>
+            <input class="form-control mb-2" type="number" step="0.1" name="bmi" placeholder="BMI (如 22.5)">
+            <input class="form-control mb-2" type="text" name="beneficial_genera" placeholder="有益菌属（逗号分隔，如 Faecalibacterium,Roseburia）">
+            <select class="form-control mb-2" name="gender"><option>Male</option><option>Female</option></select>
+            <input class="form-control mb-2" name="health" placeholder="健康状况">
+            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="has_pathogen" value="true"><label class="form-check-label">携带病原菌</label></div>
+            <input class="form-control" type="file" name="file" accept=".csv" required>
+        </form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gradient" onclick="uploadDonor()">保存</button></div>
+</div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+    function apiHeaders() { return { 'Authorization': `Bearer ${token}` }; }
+
+    async function fetchDonors() {
+        const res = await fetch('/donors', { headers: apiHeaders() });
+        return await res.json();
+    }
+
+    async function uploadDonor() {
+        const form = document.getElementById('donorForm');
+        const data = new FormData(form);
+        const res = await fetch('/donors/upload', { method: 'POST', headers: apiHeaders(), body: data });
+        const result = await res.json();
+        alert(JSON.stringify(result));
+        location.reload();
+    }
+
+    function showSection(id) {
+        document.querySelectorAll('.content-section').forEach(el => el.style.display = 'none');
+        document.getElementById(id).style.display = 'block';
+        if (id === 'donors-section') loadDonorsTable();
+        if (id === 'dashboard-section') loadDashboard();
+    }
+
+    async function loadDonorsTable() {
+        const donors = await fetchDonors();
+        const tbody = document.getElementById('donorTableBody');
+        tbody.innerHTML = donors.map(d => `<tr><td>${d.id}</td><td>${d.name}</td><td>${d.age}</td><td>${d.bmi || '-'}</td><td>${d.shannon}</td><td>${d.beneficial_genera || '-'}</td><td>${d.has_pathogen ? '是' : '否'}</td></tr>`).join('');
+    }
+
+    async function loadDashboard() {
+        const donors = await fetchDonors();
+        document.getElementById('statCards').innerHTML = `
+            <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#0d6efd,#3b82f6)"><i class="fas fa-users"></i><h5>供体总数</h5><h2>${donors.length}</h2></div></div>
+            <div class="col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#198754,#10b981)"><i class="fas fa-check-circle"></i><h5>健康供体</h5><h2>${donors.filter(d=>!d.has_pathogen).length}</h2></div></div>`;
+    }
+
+    document.getElementById('matchForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const res = await fetch('/match', { method: 'POST', headers: apiHeaders(), body: formData });
+        const data = await res.json();
+        const div = document.getElementById('matchResult');
+        if (data.error) { div.innerHTML = `<div class="alert alert-danger">${data.error}</div>`; return; }
+        const b = data.best_match;
+        let html = `<div class="alert alert-success">
+            <h5>${data.recommend_level}</h5>
+            <strong>最佳供体：</strong>${b.name} (ID: ${b.donor_id})<br><hr>
+            <small>综合得分：<b>${b.total_score}</b> / 1.0</small><br>
+            <small>菌群相似度分：${b.sim_score} | 多样性优势分：${b.div_score}</small><br>
+            <small>供体香农指数：${b.shannon_donor} | 受体香农指数：${b.shannon_recipient}</small><br>
+            <small>Bray-Curtis 距离：${b.braycurtis} (越低越相似)</small><br>
+            ${b.beneficial_abund !== undefined && b.beneficial_abund !== null ? `<small>供体有益菌丰度：${b.beneficial_abund}</small><br>` : ''}
+            <small>供体年龄：${b.age} | BMI：${b.bmi} | 健康状态：${b.health_status}</small>
+        </div>`;
+        if (data.alternatives && data.alternatives.length > 0) {
+            html += `<h6 class="mt-3">备选供体</h6><ul class="list-group">`;
+            data.alternatives.forEach(a => {
+                html += `<li class="list-group-item">${a.name} | 综合得分：${a.total_score} | 相似度：${a.sim_score} | 多样性优势：${a.div_score}</li>`;
+            });
+            html += `</ul>`;
+        }
+        div.innerHTML = html;
+    });
+
+    function logout() { localStorage.removeItem('token'); window.location.href = '/login'; }
+    window.onload = () => loadDashboard();
+</script>
+</body>
+</html>
